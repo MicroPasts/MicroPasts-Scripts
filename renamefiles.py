@@ -32,14 +32,6 @@ def multi_replace(search, replace, path):
         return False
     for dirpath, dirs, files in os.walk(path):
         for filename in files:
-            # replace contents
-            indata = open(os.path.join(dirpath, filename)).read()
-            if search in indata:
-                new = indata.replace(search, replace)
-                output = open(os.path.join(dirpath, filename), "w")
-                output.write(new)
-                counter_contents +=1
-                
             # replace in filename
             if search in filename:
                 os.rename(
