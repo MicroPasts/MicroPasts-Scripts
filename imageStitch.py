@@ -14,7 +14,9 @@ def tokenize(filename):
 root = ''
 directory = root + ''
 extension = '.jpg'
+#Are the folders arranged with front image as odd numbers?
 frontfirst = True
+#Rotation required 
 reqrot = 90
 # A new directory to put merged images into
 resdir = directory + '/new/'
@@ -35,21 +37,23 @@ else:
 
 #Loop through both arrays
 for f, b in zip(cardfronts, cardbacks):
-    print(f, b)
     imf = Image.open(os.path.join(directory, f))
     imb = Image.open(os.path.join(directory, b))
     #rotate the images
     imf = imf.rotate(reqrot)
     imb = imb.rotate(reqrot)
     
+    #Work out maximum width
     maxwd = max(imf.size[0],(imb.size[0]))
+    #Add heights together
     sumht = imf.size[1] + imb.size[1]
+    #Create new image
     imnew = Image.new('RGB', (maxwd,sumht), 'black')
     #Paste them back together
     imnew.paste(imf, (0,0))
     imnew.paste(imb, (0,imf.size[1]))
-    
+    #Split file names up
     var1, var2 = f.split(".")
     var3, var4 = b.split(".")
-    
+    #Save new image
     imnew.save(resdir + var1 + '_' + var3 + '_fb' + extension)
