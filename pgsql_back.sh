@@ -24,7 +24,7 @@ done
  
 if [ $# = 0 ]; then
         SCRIPTPATH=$(cd ${0%/*} && pwd -P)
-        source $SCRIPTPATH/pg_backup.config
+        source $SCRIPTPATH/config_pgsql.sh
 fi;
  
 ###########################
