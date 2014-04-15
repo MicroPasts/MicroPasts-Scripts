@@ -328,7 +328,7 @@ fi
 	
 echo ======================================================================
 echo AutoPostgreSQLBackup VER $VER
-echo http://autopgsqlbackup.frozenpc.net/
+echo $DBHOST
 echo 
 echo Backup of Database Server - $DBHOST
 echo ======================================================================
