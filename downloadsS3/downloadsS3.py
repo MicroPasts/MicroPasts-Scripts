@@ -2,6 +2,7 @@
 ## Download files from Amazon S3 (e.g. raw photos for 3D models)
 ## Andy Bevan 15-Jun-2014
 __author__ = 'ahb108'
+## Currently for Python 2.7.5 (tested on MacOSX 10.9.2) launched in a virtual environment:
 
 from boto.s3.connection import S3Connection
 import argparse
@@ -20,9 +21,12 @@ pth = args.bucket.split('/')
 mainbucket = pth[2].split('.')[0]
 objbucket = '/'.join(pth[3:len(pth)])
 bkt = conn.get_bucket(mainbucket)
+print("Downloading files from Amazon S3...")
 for key in bkt.list(objbucket):
     mykey = key.name.encode('utf-8')
     try:
         res = key.get_contents_to_filename(mykey.split('/')[-1])
     except:
         pass
+    
+print("Done.")
