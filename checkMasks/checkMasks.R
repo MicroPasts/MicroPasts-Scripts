@@ -8,21 +8,23 @@ setwd("~/Documents/research/micropasts/analysis") #MacOSX
 library(jsonlite)
 
 # Import tasks from json
+#trTURL <- "http://crowdsourced.micropasts.org/app/photomaskingArreton/tasks/export?type=task&format=json"
 trTURL <- "http://crowdsourced.micropasts.org/app/photomasking/tasks/export?type=task&format=json"
 trT <- fromJSON(paste(readLines(trTURL), collapse=""))
 trT <- cbind(trT$id,trT$info)
 names(trT) <- c("id","url")
 
-# Extract musuem accession nos for objects from parent folder of image
+# Extract museum accession nos for objects from parent folder of image
 urls <- trT$url
 urls <- strsplit(urls,"/")
 objects <- vector("character", length=length(urls))
 for (a in 1:length(urls)){
-    objects[a] <- urls[[a]][6]
+    objects[a] <- urls[[a]][length(urls[[a]])-1]
 }
 objtasks <- data.frame(objects=objects,task_id=trT$id)
 
 # Import photomasking task runs from json
+#pmTrUrl <- "http://crowdsourced.micropasts.org/app/photomaskingArreton/tasks/export?type=task_run&format=json"
 pmTrUrl <- "http://crowdsourced.micropasts.org/app/photomasking/tasks/export?type=task_run&format=json"
 pmTr <- fromJSON(paste(readLines(pmTrUrl), collapse=""))
 pmTr1 <- pmTr[,names(pmTr) != "info"]
