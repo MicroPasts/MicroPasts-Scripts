@@ -1,0 +1,24 @@
+##Create Thank you lists to post to forum
+
+#Set directory
+wd <- "directory"
+# Load library
+library(jsonlite)
+
+#Extract contributors'IDs
+URL = "http://crowdsourced.micropasts.org/app/arrowheads/tasks/export?type=task_run&format=json"
+data <- fromJSON(paste(readLines(URL), collapse=""))
+data <- as.data.frame(data)
+user_id <- data$user_id
+as.data.frame(user_id) -> user_id
+
+#Match contributors'IDs with their names
+data2 <- read.csv("members.csv", sep=",")
+data2[c("id", "fullname")] -> newdata2
+names(newdata2) <- c("user_id", "fullname")
+namescon <- merge(user_id, newdata2, by="user_id")
+as.vector(namescon$fullname) -> names
+
+#Extract and print unique names
+unique(names) -> names
+paste(as.character(names), collapse=", ")
