@@ -41,11 +41,50 @@ trTr <- cbind(trTr,geo)
 # Sort by user ID then by task ID
 trTr <- trTr[with(trTr, order(taskID, userID)), ]
 
-# Enable the 4 keyword categories and annotations by converting 'list' columns to 'character'
-#kw1 <- data.frame(lapply(trTr$activities, as.character), collapse="; ")
-#names(kw1) <- c("Activities")
-#trTr <- cbind(trTr,kw1)
+# Sort out keyword lists in columns for theme, activities, things and people
+# Theme:
+thmdf <- data.frame(Theme=character(length(trTr$theme)))
+thmdf$Theme <- "tmp"
+thmdf$Theme <- as.character(thmdf$Theme)
+theme <- trTr$theme
+for (i in 1:length(theme)) {
+  thmdf$Theme[i] <- paste(theme[[i]], collapse="; ")
+}
+trTr <- cbind(trTr,thmdf)
+trTr$theme <- NULL
 
+# Activities:
+actdf <- data.frame(Activities=character(length(trTr$activities)))
+actdf$Activities <- "tmp"
+actdf$Activities <- as.character(actdf$Activities)
+activities <- trTr$activities
+for (i in 1:length(activities)) {
+  actdf$Activities[i] <- paste(activities[[i]], collapse="; ")
+}
+trTr <- cbind(trTr,actdf)
+trTr$activities <- NULL
+
+# Things:
+tngdf <- data.frame(Things=character(length(trTr$things)))
+tngdf$Things <- "tmp"
+tngdf$Things <- as.character(tngdf$Things)
+things <- trTr$things
+for (i in 1:length(things)) {
+  tngdf$Things[i] <- paste(things[[i]], collapse="; ")
+}
+trTr <- cbind(trTr,tngdf)
+trTr$things <- NULL
+
+# People:
+ppldf <- data.frame(People=character(length(trTr$people)))
+ppldf$People <- "tmp"
+ppldf$People <- as.character(ppldf$People)
+people <- trTr$people
+for (i in 1:length(people)) {
+  ppldf$People[i] <- paste(people[[i]], collapse="; ")
+}
+trTr <- cbind(trTr,ppldf)
+trTr$people <- NULL
 
 # Add user credit
 tsks <- unique(as.character(trTr$taskID))
@@ -71,10 +110,9 @@ for (a in 1:length(tsks)){
     trTr1 <- rbind(trTr1,atask,newrow,newrow,newrow)
 }
 
-# Finally reorder the columns fo the data to something easier to refer to:
-preforder <- c("taskID","userID","imageID","imageLabel","orientation","Lon","Lat","pleiadesID","toSearch","keywordsUser","comments","imageURL")
-# Add the following to columns above: "theme","activities","things","people","annotations"
+# Finally reorder the columns of the data to something easier to refer to:
+preforder <- c("taskID","imageID","imageLabel","orientation","Lon","Lat","pleiadesID","toSearch","Theme","Activities","Things","People","keywordsUser","comments","userID","inputBy","imageURL")
 trTr1 <- trTr1[ ,preforder]
 
-# Export as csv file
+# Export as csv file.
 write.csv(trTr1, file="output.csv",row.names=FALSE, na="")
