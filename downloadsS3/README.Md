@@ -13,4 +13,5 @@ Looking at the above example, you will see that task 6421 is listed first and re
 [http://micropasts-palstaves.s3.amazonaws.com/Palstaves-photos-3D_13Feb14/Palstaves_Burnham-on-Crouch-Essex/1911 5-15 2/IMG_1668.JPG]
 
 So initially we simply want to download all photos associated with this bucket, for which an example command line call (in a virtual environment) is:
-`~/Virtualenvs/immerges/bin/python Documents/research/micropasts/pyscripts/photomasking/downloadsS3/downloadsS3.py -b 'http://micropasts-palstaves.s3.amazonaws.com/Palstaves-photos-3D_13Feb14/Palstaves_Burnham-on-Crouch-Essex/1911 5-15 2' -w 'Documents/research/micropasts/pyscripts/photomasking/working'`
+
+~/Virtualenvs/immerges/bin/python Documents/research/micropasts/scripts/photomasking/downloadsS3/downloadsS3.py -b 'http://micropasts-palstaves.s3.amazonaws.com/Palstaves-photos-3D_13Feb14/Palstaves_Burnham-on-Crouch-Essex/1911 5-15 2' -w 'Documents/research/micropasts/scripts/photomasking/working'
