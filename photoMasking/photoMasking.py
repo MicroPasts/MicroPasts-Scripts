@@ -85,8 +85,8 @@ for q in range(0, len(files)):
         else:
             fn = imnameonly + '_mask_' + str(a) + '_user' + str(jtaskrun['user_id']) + '.JPG'
         imtmp.save(fn)
-        if a is 0:
-            fn0 = imnameonly + '_mask.JPG'
-            imtmp.save(fn0)
+        if a is 1:
+            fn1 = imnameonly + '_mask.JPG'
+            imtmp.save(fn1)
 
 print("Done.")
