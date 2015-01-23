@@ -8,7 +8,7 @@ setwd("~/Documents/research/micropasts/analysis") #MacOSX
 library(jsonlite)
 
 # Object we are looking for (this shoud be exactly as written for S3 bucket):
-obj <- '1911 5-15 2'
+obj <- '56_6-27_44'
 
 # Load user data (download a fresh copy from link below before proceeding)
 #http://crowdsourced.micropasts.org/admin/users/export?format=csv (when logged in as admin)
