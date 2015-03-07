@@ -1,6 +1,6 @@
 #Notes and Usage
 
-These scripts relate to crowd-sourced amphora profiling applications hosted n the MicroPasts site (e.g. http://crowdsourced.micropasts.org/app/amphs1/) The three scripts (a) explore the quality of user contributions to a particular amphora digitising task, (b) take the best contribution(s) and create a clean 2D vector polygon dataset and (c) create a manifold 3D mesh.
+These scripts relate to crowd-sourced amphora profiling applications hosted on the MicroPasts site (e.g. http://crowdsourced.micropasts.org/app/amphs1/) The three scripts (a) explore the quality of user contributions to a particular amphora digitising task, (b) take the best contribution(s) and create a clean 2D vector polygon dataset and (c) create a manifold 3D mesh.
 
 vesselprofiling_userchecks.R -- An R script that currently runs line by line and needs the user to modify several settings in the top-most portion of the script. It only downloads and processes one vessel outline at a time. You need to know the app name and task ID of the vessel you want. It will go through each user contribution and compile a quick summary of relevant statistics about the contribution, plus a pdf plot of what the contribution looks like. It is meant to be run before running a second R-script (see below) which builds a clean 2D shapefile and other outputs.
 
