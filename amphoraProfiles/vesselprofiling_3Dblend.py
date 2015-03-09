@@ -30,6 +30,8 @@ try:
 except ValueError:
   render = False
 
+radial_ends = 0.2
+
 
 
 # Read in the shp file...
@@ -187,6 +189,7 @@ for record in range(1,records+1):
     if data[0]==ord(' ') and field['type']=='C':
       value = data[1:].decode('utf-8').strip()
       fields[record][field['name']] = value
+      print('Field %i has %s=%s' % (record, field['name'], value))
 
 
 
@@ -251,7 +254,10 @@ if len(cross_section)==0:
 else:
   # Take first one as no clue what to do otherwise...
   cross_section = cross_section[0]
-  
+
+cross_section = cross_section[:,1::-1] # Got the x and y coordinates the wrong way around - swapping them here is easier than correcting all of the below code.
+cross_section[:,1] *= -1.0
+
 low = cross_section[:,0].min()
 high = cross_section[:,0].max()
 mean = cross_section[:,1].mean()
@@ -263,7 +269,7 @@ cross_section[:,1] = (cross_section[:,1] - mean) / (high - low)
 
 # Process each handle curve in turn...
 for field in fields.values():
-  if field['Type']=='Handle':
+  if field['Type'] in ['Handle', 'Left Handle', 'Right Handle']:
     # Get the polygon...
     outline = field['polygons'][0]
     
@@ -342,26 +348,41 @@ for field in fields.values():
       return (1.0-seg_t) * curve[base,:] + seg_t * curve[base+1,:]
     
     
-    # Iterate and stitch together a sequence of curves - let Blender fix the edges so only do vertices and faces; need end caps...
+    # Iterate and stitch together a sequence of curves - let Blender fix the edges so only do vertices and faces...
     verts = []
     faces = []
     
     for t in numpy.linspace(0.0, 1.0, 96):
+      # Get the inner and outer position between which we will interpolate the 
       start = curve_pos(outer, t)
       end = curve_pos(inner, 1.0-t)
       dist = numpy.sqrt(numpy.square(end - start).sum())
       
+      # Copy the cross section, with an additional third dimension...
       cs = numpy.concatenate((cross_section[:,:], numpy.zeros((cross_section.shape[0],1))), axis=1)
       
+      # Calculate the coordinates of the vertices from positioning the cross scetion between the inner and outer curve at the current position...
       xt = cs[:,0].copy()
       cs[:,0] = (1.0 - xt) * start[numpy.newaxis,0] + xt * end[numpy.newaxis,0]
       cs[:,1] *= dist
       cs[:,2] = (1.0 - xt) * start[numpy.newaxis,1] + xt * end[numpy.newaxis,1]
       
+      # If close to the end of the handle interpolate towards radial coordinates, to make sure we get a clean join...
+      if (t<radial_ends) or ((1.0-t)<radial_ends):
+        amount = (t / radial_ends) if t<radial_ends else ((1.0-t) / radial_ends)
+        
+        ratio = numpy.fabs(cs[:,0]) / numpy.sqrt(numpy.square(cs[:,:2]).sum(axis=1))
+        
+        ratio = numpy.exp(numpy.log(ratio) * (1.0-amount)) # Interpolation bit - looks weird but makes sense if you think amount it!
+        
+        cs[:,:2] *= ratio[:,numpy.newaxis]
+      
+      # Add the vertices to the mesh...
       base = len(verts)
       for i in range(cs.shape[0]-1):
         verts.append((cs[i,0], cs[i,1], cs[i,2]))
       
+      # If there are previous rings of vertices add in the faces needed to stitch this ring to the previous...
       if t!=0.0:
         for i in range(cs.shape[0]-1):
           v1 = base+i
@@ -369,9 +390,11 @@ for field in fields.values():
           v3 = v2 - (cs.shape[0]-1)
           v4 = v1 - (cs.shape[0]-1)
           faces.append((v1, v2, v3, v4))
-          
-    faces.append(tuple(range(cross_section.shape[0]-1)))
-    faces.append(tuple(range(len(verts)-cross_section.shape[0]+1, len(verts))))
+    
+    
+    # Add end caps so its a sealed mesh...
+    #faces.append(tuple(range(cross_section.shape[0]-1)))
+    #faces.append(tuple(range(len(verts)-cross_section.shape[0]+1, len(verts))))
     
    
     # Make a mesh from the vertex and face cloud just created...
