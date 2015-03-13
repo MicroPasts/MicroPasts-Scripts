@@ -7,7 +7,7 @@ setwd("~/Documents/research/micropasts/analysis") #MacOSX
 # Add necessary library
 library(jsonlite)
 
-# Object we are looking for (this shoud be exactly as written for S3 bucket):
+# Object we are looking for (this should be exactly as written for S3 bucket):
 obj <- '56_6-27_44'
 
 # Load user data (download a fresh copy from link below before proceeding)
@@ -16,8 +16,16 @@ users <- read.csv("csv/users.csv", header=TRUE)
 users <- users[,c("id","fullname","name")]
 
 # Import task runs from json (may take some time)
-pmTrURL <- "http://crowdsourced.micropasts.org/app/photomasking/tasks/export?type=task_run&format=json"
-pmTr <- fromJSON(paste(readLines(pmTrURL), collapse=""))
+# Download task runs to working directory by pasting the relevant link into a browser, e.g.
+# http://crowdsourced.micropasts.org/app/photomaskingBurley/tasks/export?type=task_run&format=json
+
+myJsonDownload <- "photomasking_task_run.json" # Change according to JSON file name
+pmTr <- fromJSON(paste(readLines(myJsonDownload), collapse=""))
+
+# Old version:
+# pmTrURL <- "http://crowdsourced.micropasts.org/app/photomasking/tasks/export?type=task_run&format=json"
+# pmTr <- fromJSON(paste(readLines(pmTrURL), collapse=""))
+
 # Re-arrange slightly and drop some columns
 pmTr <- cbind(pmTr$info, pmTr$user_id,pmTr$task_id)
 names(pmTr)[length(names(pmTr))] <- "taskID"
