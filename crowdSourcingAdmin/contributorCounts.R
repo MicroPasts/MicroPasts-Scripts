@@ -78,4 +78,11 @@ contributors <- merge(user_id, userList, by="user_id")
 freq <- count(contributors, "fullname")
 names(freq) <- c("contributor", "tasks")
 orderedData <- arrange(freq,tasks)
-write.csv(orderedData, file="data/eesAmarnaCounts.csv",row.names=FALSE, na="")
+csv <- paste('data/', project, 'Counts.csv', sep= '')
+write.csv(orderedData, file=csv,row.names=FALSE, na='')
+
+# Create graph
+library(ggplot2)
+filename <- paste('data/', project, 'TasksCount.png', sep='' )
+ggplot(data=orderedData, aes(x=contributor, y=tasks, group=1)) + geom_line() + xlab('Contributor name') + ylab('Tasks contributed') + ggtitle(paste('Contributions for the', project, 'project'))
+ggsave(file=filename, width=24, height=12, dpi=100)
