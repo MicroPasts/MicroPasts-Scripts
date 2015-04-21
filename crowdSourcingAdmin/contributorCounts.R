@@ -26,6 +26,7 @@ if (!file.exists('data')){
 }
 # Load library
 library(jsonlite)
+
 library(plyr)
 
 # Set the project name
@@ -75,14 +76,27 @@ names(userList) <- c("user_id", "fullname")
 
 # Merge the data
 contributors <- merge(user_id, userList, by="user_id")
+
+# Count values
 freq <- count(contributors, "fullname")
+
+# Rename the columns
 names(freq) <- c("contributor", "tasks")
+
+# Order the data 
 orderedData <- arrange(freq,tasks)
+
+# Write data to csv for output
 csv <- paste('data/', project, 'Counts.csv', sep= '')
 write.csv(orderedData, file=csv,row.names=FALSE, na='')
 
-# Create graph
 library(ggplot2)
+
+# Filename for graph
 filename <- paste('data/', project, 'TasksCount.png', sep='' )
+
+# Create graph
 ggplot(data=orderedData, aes(x=contributor, y=tasks, group=1)) + geom_line() + xlab('Contributor name') + ylab('Tasks contributed') + ggtitle(paste('Contributions for the', project, 'project'))
+
+# Save graph
 ggsave(file=filename, width=24, height=12, dpi=100)
