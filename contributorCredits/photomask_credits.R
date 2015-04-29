@@ -1,6 +1,6 @@
 
 # Set working directory (for example as below)
-setwd("~/Documents/research/micropasts/analysis") #MacOSX
+setwd("~/Documents/MicroPasts/Crowd-Sourcing/3D_Modelling/Models") #MacOSX
 #setwd("C:\\micropasts\\analysis") #Windows
 #setwd("micropasts/analysis") #Linux
 
@@ -8,23 +8,19 @@ setwd("~/Documents/research/micropasts/analysis") #MacOSX
 library(jsonlite)
 
 # Object we are looking for (this should be exactly as written for S3 bucket):
-obj <- '56_6-27_44'
+obj <- '1927 1-7 1h'
 
 # Load user data (download a fresh copy from link below before proceeding)
-#http://crowdsourced.micropasts.org/admin/users/export?format=csv (when logged in as admin)
-users <- read.csv("csv/users.csv", header=TRUE)
+# http://crowdsourced.micropasts.org/admin/users/export?format=csv (when logged in as admin)
+users <- read.csv("csv/all_users.csv", header=TRUE)
 users <- users[,c("id","fullname","name")]
 
-# Import task runs from json (may take some time)
-# Download task runs to working directory by pasting the relevant link into a browser, e.g.
-# http://crowdsourced.micropasts.org/app/photomaskingBurley/tasks/export?type=task_run&format=json
-
-myJsonDownload <- "photomasking_task_run.json" # Change according to JSON file name
+# Import task runs from json: download and unzip (this may take some time)
+# Change app and file names in the link and variables below
+download.file("http://crowdsourced.micropasts.org/app/photomaskingBurley/tasks/export?type=task_run&format=json",'photomaskingBurleyTaskRuns.zip')
+unzip('photomaskingBurleyTaskRuns.zip')
+myJsonDownload <- 'photomaskingBurley_task_run.json'
 pmTr <- fromJSON(paste(readLines(myJsonDownload), collapse=""))
-
-# Old version:
-# pmTrURL <- "http://crowdsourced.micropasts.org/app/photomasking/tasks/export?type=task_run&format=json"
-# pmTr <- fromJSON(paste(readLines(pmTrURL), collapse=""))
 
 # Re-arrange slightly and drop some columns
 pmTr <- cbind(pmTr$info, pmTr$user_id,pmTr$task_id)
@@ -39,7 +35,6 @@ objruns <- pmTr[grep(obj,pmTr$img),]
 # Merge with user data
 objruns <- merge(objruns,users, by.x="userID", by.y="id")
 
-
 # Extract a surname to sort on where possible.
 objruns$SortName <- NA
 for (a in 1:nrow(objruns)){
@@ -48,7 +43,7 @@ for (a in 1:nrow(objruns)){
     objruns$SortName[a] <- tail(ss, n=1)
 }
 
-# Sort contributors, extract uniuqe names and capitalise
+# Sort contributors, extract unique names and capitalise
 objruns <- objruns[order(objruns$SortName),]
 contribs <- unique(as.character(objruns$fullname))
 

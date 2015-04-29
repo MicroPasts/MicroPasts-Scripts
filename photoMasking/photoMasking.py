@@ -11,7 +11,9 @@ import json
 import re
 import numpy as np
 import argparse
-import os
+import os 
+import urllib2
+import zipfile
 
 # Argument parser
 parser = argparse.ArgumentParser(description='This is a script to combine vector polygon masks into a binary raster mask for 3d modelling.')
@@ -35,25 +37,60 @@ for q in range(0, len(files)):
     # Open an example image
     img = Image.open(files[q])
     imnameonly = os.path.splitext(files[q])[0]
+
     # Get JSON data for tasks and find task ID for this file
-    url = str(pybinst) + '/app/' + str(app) + '/tasks/export?type=task&format=json'
-    http = urllib3.PoolManager()
-    jurl = http.urlopen('GET', url, preload_content=False)
-    jtasks = json.loads(jurl.read())
-    # Loop through looking for those tasks with the necessary
-    # look-up image (almost always one unless tasks have been duplicated,
-    # but allowing more than one just in case)
+    downloadURL = str(pybinst) + '/app/' + str(app) + '/tasks/export?type=task&format=json'   
+    outputFilename = str(app) + '_task.json'
+
+    # Download JSON file to working direcory
+    response = urllib2.urlopen(downloadURL)
+    zippedData = response.read()
+
+    # Save data to disk
+    output = open(outputFilename,'wb')
+    output.write(zippedData)
+    output.close()
+
+    # Extract the data
+    zfobj = zipfile.ZipFile(outputFilename)
+    for name in zfobj.namelist():
+        uncompressed = zfobj.read(name)
+
+    # Save uncompressed data to disk
+    outputFilename = name
+    output = open(outputFilename,'wb')
+    output.write(uncompressed)
+    output.close()
+
+    with open(outputFilename) as data_file:    
+        jtasks = json.load(data_file)
+
+    # Loop through looking for those tasks with the necessary look-up image (almost always one 
+    # unless tasks have been duplicated, but allowing more than one just in case)
     imtasks = []
     for elm in range(0, len(jtasks)):
         onetask = jtasks[elm]
         onetaskurl = onetask['info']['url_b'].encode('utf-8')
         if re.search(files[q], onetaskurl): imtasks.extend([onetask['id']])
+
     # Get JSON data for task runs (even if they are duplicated)
     jtaskruns = []
     for a in range(0, len(imtasks)):
-        url = str(pybinst) + '/app/' + str(app) + '/' + str(imtasks[a]) + '/results.json'
-        jurl = http.urlopen('GET', url, preload_content=False)
-        jtaskruns.extend(json.loads(jurl.read()))  
+        downloadURL = str(pybinst) + '/app/' + str(app) + '/' + str(imtasks[a]) + '/results.json'     
+        outputFilename = str(app) + str(imtasks[a]) + '_task_run.json'
+
+        # Download JSON files to working direcory
+        response = urllib2.urlopen(downloadURL)
+        fileData = response.read()
+
+        # Save data to disk
+        output = open(outputFilename,'wb')
+        output.write(fileData)
+        output.close()
+
+        with open(outputFilename) as data_file:    
+            jtaskruns.extend(json.load(data_file))
+            
     # Loop through and extract outlines 
     for a in range(0, len(jtaskruns)):
         jtaskrun = jtaskruns[a]  # one contributor
