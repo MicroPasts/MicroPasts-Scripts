@@ -466,30 +466,10 @@ bpy.context.scene.render.filepath = '//' + os.path.basename(base_fn)
 
 
 
-# Setup a material for the subject...
-material = bpy.data.materials.new('Basic')
-material.use_nodes = True
-tree = material.node_tree
+# Append a material for the subject...
+bpy.ops.wm.append(filepath='//materials.blend/Material/Amphora', filename='Amphora', directory=os.path.join(os.path.dirname(__file__), 'materials.blend') + '/Material/')
 
-tree.links.clear()
-tree.nodes.clear()
-
-final = tree.nodes.new('ShaderNodeOutputMaterial')
-final.location = 0, 0
-        
-mix = tree.nodes.new('ShaderNodeMixShader')
-mix.location = -200, 0
-mix.inputs[0].default_value = 0.2
-
-diffuse = tree.nodes.new('ShaderNodeBsdfDiffuse')
-diffuse.location = -400, -100
-
-glossy = tree.nodes.new('ShaderNodeBsdfGlossy')
-glossy.location = -400, 100
-
-tree.links.new(mix.outputs[0], final.inputs[0])
-tree.links.new(diffuse.outputs[0], mix.inputs[1])
-tree.links.new(glossy.outputs[0], mix.inputs[2])
+material = bpy.data.materials['Amphora']
 
 for part in parts:
   part.data.materials.append(material)
