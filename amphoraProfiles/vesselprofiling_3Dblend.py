@@ -653,6 +653,64 @@ def vol_com(line):
   return vol, com
 
 
+## Given a line for lathing this determines the maximum and minimum thickness, as seen from the axis of revolution...
+def thickness(line):
+  # For every point try and find its neighbouring line segment, intercept, and use that to determine the thickness...
+  depths = []
+  
+  for i in range(line.shape[0]):
+    # Check if a line extending from this vertex is horizontal - if so then its length is the thickness...
+    if i!=0 and numpy.fabs(line[i-1,1] - line[i,1])<1e-6:
+      depths.append(numpy.fabs(line[i-1,0] - line[i,0]))
+      continue
+    
+    if i+1<line.shape[0] and numpy.fabs(line[i,1] - line[i+1,1])<1e-6:
+      depths.append(numpy.fabs(line[i,0] - line[i+1,0]))
+      continue
+    
+    # Check all line segments that don't include this vertex - numbers aren't high enough to care that this is O(n^2)...
+    for j in range(line.shape[0]-1):
+      if ((j>=i-1) and (j<=i+1)) or (i==0 and j==(line.shape[0]-2)):
+        continue # Line segment includes current vertex.
+      
+      if (line[j,1]<line[i,1]) != (line[j+1,1]<line[i,1]):
+        # Intersect - find out and record exact thickness...
+        t = (line[i,1] - line[j,1]) / (line[j+1,1] - line[j,1])
+        val = (1-t) * line[j,0] + t * line[j+1,0]
+        depths.append(numpy.fabs(line[i,0] - val))
+  
+  return numpy.min(depths), numpy.max(depths)
+
+
+## Calculates the minimum and maximum inner radius...
+def inner_radius(line):
+  # For every point try and find its neighbouring line segment, intercept, and use that to determine if its inner or outer - ignore if outer...
+  rads = []
+  
+  for i in range(line.shape[0]):
+    # Check if a line extending from this vertex is horizontal - if so then take the minimum of the two as the inner radius at this point...
+    if i!=0 and numpy.fabs(line[i-1,1] - line[i,1])<1e-6:
+      rads.append(min(numpy.fabs(line[i-1,0]), numpy.fabs(line[i,0])))
+      continue
+    
+    if i+1<line.shape[0] and numpy.fabs(line[i,1] - line[i+1,1])<1e-6:
+      rads.append(min(numpy.fabs(line[i,0]), numpy.fabs(line[i+1,0])))
+      continue
+    
+    # Check all line segments that don't include this vertex - numbers aren't high enough to care that this is O(n^2)...
+    for j in range(line.shape[0]-1):
+      if ((j>=i-1) and (j<=i+1)) or (i==0 and j==(line.shape[0]-2)):
+        continue # Line segment includes current vertex.
+      
+      if (line[j,1]<line[i,1]) != (line[j+1,1]<line[i,1]):
+        # Intersect - select the one with the lowest absolute value as the inner radius...
+        t = (line[i,1] - line[j,1]) / (line[j+1,1] - line[j,1])
+        val = (1-t) * line[j,0] + t * line[j+1,0]
+        rads.append(min(numpy.fabs(line[i,0]), numpy.fabs(val)))
+  
+  return numpy.min(rads), numpy.max(rads)
+
+
 ## Function to clip a lathed line sequence between two heights; can use None for infinity...
 def clip_line(line, low=None, high=None):
   output = []
@@ -720,8 +778,34 @@ for field in fields.values():
       stats['com.body.cavity'] = com[min_i] - low[2]
 
 
+## Calculate the minimum and maximum thicknesses of the shell...
+for field in fields.values():
+  if field['Type']=='External':
+    line = field['polygons'][0]
+    stats['thickness.min'], stats['thickness.max'] = thickness(line)
+    
+    if neck_join_height!=None:
+      neck = clip_line(line, low=neck_join_height)
+      body = clip_line(line, high=neck_join_height)
+
+      stats['thickness.body.min'], stats['thickness.body.max'] = thickness(body)
+      stats['thickness.neck.min'], stats['thickness.neck.max'] = thickness(neck)
+
+
+## The minimum radius of the neck and the maximum radius of the body...
+if neck_join_height!=None:
+  for field in fields.values():
+    if field['Type']=='External':
+      line = field['polygons'][0]
+      neck = clip_line(line, low=neck_join_height)
+      body = clip_line(line, high=neck_join_height)
+      
+      stats['inner_radius.neck.min'], _ = inner_radius(neck)
+      _, stats['inner_radius.body.max'] = inner_radius(body)
+
+
 ## Write the file...
-sf = open(base_fn + '.json', 'w')
+sf = open(base_fn + '_stats.json', 'w')
 sf.write(json.dumps(stats, indent = 2, sort_keys=True))
 sf.close()
 
