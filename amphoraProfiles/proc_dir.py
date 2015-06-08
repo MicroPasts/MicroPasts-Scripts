@@ -12,6 +12,9 @@ import os.path
 import argparse
 import subprocess
 
+import json
+from collections import defaultdict
+
 
 
 # Handle command line arguments...
@@ -96,3 +99,36 @@ for i, job in enumerate(jobs):
 
 
 # Collate all the generated statistics into a spreadsheet...
+stats = defaultdict(dict) # Indexed [key][amphora]
+
+for base in shape_files:
+  # Open the json file...
+  fn = base + '_stats.json'
+  if not os.path.exists(fn):
+    print('Warning: Stats file for %s not found' % base)
+    continue
+  
+  amphora = os.path.split(os.path.split(base)[0])[1] # Parent directory
+  
+  f = open(fn, 'r')
+  data = json.load(f)
+  f.close()
+  
+  for key, value in data.items():
+    stats[key][amphora] = value
+
+
+columns = stats.keys()
+columns.sort()
+
+rows = stats['height'].keys()
+rows.sort()
+
+f = open('stats.csv', 'w')
+f.write('id,' + ','.join(columns) + '\n')
+
+for row in rows:
+  values = [str(stats[column][row]) for column in columns]
+  f.write(row+','+','.join(values) + '\n')
+
+f.close()
