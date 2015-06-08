@@ -9,6 +9,7 @@
 import sys
 import os
 import struct
+import json
 
 import numpy
 import bpy
@@ -207,11 +208,12 @@ def prepare(type_name):
     if field['Type']==type_name:
       
       # Parts of the mesh...
-      points = field['polygons'][0]
+      points = field['polygons'][0][:-1,:]
       
       verts = numpy.concatenate((points[:,0,numpy.newaxis], numpy.zeros(points.shape[0])[:, numpy.newaxis], points[:,1,numpy.newaxis]), axis=1)
       verts[verts[:,0]>0.0,0] = 0.0
       edges = list(zip(range(points.shape[0]-1), range(1, points.shape[0])))
+      edges.append((points.shape[0]-1, 0))
       faces = []
       
       # Create the actual mesh object...
@@ -586,6 +588,142 @@ bpy.ops.object.select_all(action='DESELECT')
 
 # Save out the .blend file...
 bpy.ops.wm.save_as_mainfile(filepath=base_fn+'.blend')
+
+
+
+# Write out some stats to a .json file...
+stats = {}
+
+## Dimensions...
+def radius_object(name):
+  targ = bpy.data.objects[name]
+  radius = 0.0
+  for corner in targ.bound_box:
+    for coord in range(2):
+      val = numpy.fabs(corner[coord])
+      if val>radius:
+        radius = val
+  
+  return radius
+
+stats['height'] = high[2] - low[2]
+stats['radius.handle'] = radius_object('Handle')
+stats['radius.shell'] = radius_object('External')
+stats['radius'] = max(stats['radius.handle'], stats['radius.shell'])
+
+
+## Neck join height...
+neck_join_height = None
+for field in fields.values():
+  if field['Type']=='Neck join':
+    neck_join_height = field['polygons'][0][:,1].min()
+
+if neck_join_height!=None:
+  stats['height.neck'] = high[2] - neck_join_height
+  stats['height.body'] = neck_join_height - low[2]
+
+
+## Function to calculate the volume and center of mass of a sequence of points that are lathed - [:,0] are distances from the axis, [:,1] are position along the axis. Outputs two values of each - one for the positive direction parts, another for the negative. This allows you to calculate both relevant numbers...
+def vol_com(line):
+  vol = [0.0, 0.0] # Note that this doubles as weight for the incrimental mean in com.
+  com = [0.0, 0.0]
+  
+  for i in range(line.shape[0]-1):
+    if line[i,1] > line[i+1,1]:
+      a = numpy.fabs(line[i+1,0])
+      b = numpy.fabs(line[i,0])
+      c = line[i,1] - line[i+1,1]
+      bottom = line[i+1,1]
+      oi = 0
+    else:
+      a = numpy.fabs(line[i,0])
+      b = numpy.fabs(line[i+1,0])
+      c = line[i+1,1] - line[i,1]
+      bottom = line[i,1]
+      oi = 1
+    
+    v = numpy.pi * c * (a*a + a*b + b*b) / 3.0 # Volume of lathed slice.
+    if v>1e-6: # Zero volume would cause a divide by zero for centre of mass calculation.
+      m = bottom + numpy.pi * c * c * (a*a / 12.0 + a*b / 6.0 + b*b / 4.0) / v # Center of mass.
+      
+      # Incrimental mean update...
+      vol[oi] += v
+      com[oi] += (m - com[oi]) * v / vol[oi]
+  
+  return vol, com
+
+
+## Function to clip a lathed line sequence between two heights; can use None for infinity...
+def clip_line(line, low=None, high=None):
+  output = []
+  prev_clipped = None
+  
+  for i in range(line.shape[0]):
+    # Detect if we are cliping...
+    clip = False
+    if low!=None and line[i,1]<low:
+      clip = True
+      intercept = low
+    if high!=None and line[i,1]>high:
+      clip = True
+      intercept = high
+    
+    # If clip has changed truthiness we need to omit an intercept point; note the abuse of None for the start of the loop with prev_clipped...
+    if (clip and prev_clipped==False) or (not clip and prev_clipped==True):
+        # Intercept and omit a point on the clip line between this and the previous point...
+        t = (intercept - line[i-1,1]) / (line[i,1] - line[i-1,1])
+        rad = (1-t) * line[i-1,0] + t * line[i,0]
+        output.append((rad, intercept))
+    
+    # Omit this point if not clipped...
+    if not clip:
+      output.append((line[i,0], line[i,1]))
+    
+    # Prepare for next loop...
+    prev_clipped = clip
+  
+  return numpy.array(output, dtype=numpy.float32)
+
+
+## Calculate the volumes...
+for field in fields.values():
+  if field['Type']=='External':
+    line = field['polygons'][0]
+    vol, com = vol_com(line)
+    
+    max_i = numpy.argmax(vol)
+    min_i = numpy.argmin(vol)
+    stats['volume.shell'] = vol[max_i] - vol[min_i]
+    stats['volume.cavity'] = vol[min_i] # Assumption here that the cavity doesn't go back on itself as viewed from the lathing axis. I think this is reasonable, as such an amphora would be hard to make and highly impractical.
+    
+    stats['com.shell'] = ((com[max_i]*vol[max_i] - com[min_i]*vol[min_i]) / (vol[max_i] - vol[min_i])) - low[2]
+    stats['com.cavity'] = com[min_i] - low[2]
+    
+    if neck_join_height!=None:
+      neck = clip_line(line, low=neck_join_height)
+      body = clip_line(line, high=neck_join_height)
+      
+      vol, com = vol_com(neck)
+      max_i = numpy.argmax(vol)
+      min_i = numpy.argmin(vol)
+      stats['volume.neck.shell'] = vol[max_i] - vol[min_i]
+      stats['volume.neck.cavity'] = vol[min_i]
+      stats['com.neck.shell'] = ((com[max_i]*vol[max_i] - com[min_i]*vol[min_i]) / (vol[max_i] - vol[min_i])) - low[2]
+      stats['com.neck.cavity'] = com[min_i] - low[2]
+      
+      vol, com = vol_com(body)
+      max_i = numpy.argmax(vol)
+      min_i = numpy.argmin(vol)
+      stats['volume.body.shell'] = vol[max_i] - vol[min_i]
+      stats['volume.body.cavity'] = vol[min_i]
+      stats['com.body.shell'] = ((com[max_i]*vol[max_i] - com[min_i]*vol[min_i]) / (vol[max_i] - vol[min_i])) - low[2]
+      stats['com.body.cavity'] = com[min_i] - low[2]
+
+
+## Write the file...
+sf = open(base_fn + '.json', 'w')
+sf.write(json.dumps(stats, indent = 2, sort_keys=True))
+sf.close()
 
 
 
