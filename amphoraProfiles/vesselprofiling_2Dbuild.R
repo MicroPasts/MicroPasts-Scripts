@@ -13,10 +13,11 @@
 # Set-up (things you can change)
 setwd("~/Documents/research/micropasts/analysis/amphs/examples") #MacOSX
 appname <- "amphs1" #the app from which you wish to extract an outline.
-taskID <- 31370 #which task you want to model.
-userID <- 873 #to specify a particular contributor.
-#Use the parameters below if you wish to mix-and-match, otherwise don't touch.
-userdf <- data.frame(ScaleBarUser=userID,DimensionUser=userID,ExternalUser=userID, InternalUser=userID,MidLineUser=userID,NeckJoinUser=userID,LHandleUser=userID,RHandleUser=userID, SectionUser=userID)
+taskID <- 31382 #which task you want to model.
+userID <- 989 #to specify a particular contributor.
+# For example, to mix and match for the external profile amongst multiple contributions:
+userIDother <- 731 #if you wish to mix and match with a second contributor
+userdf <- data.frame(ScaleBarUser=userID,DimensionUser=userID,ExternalUser=userID, InternalUser=userID,MidLineUser=userID,NeckJoinUser=userID,LHandleUser=userID,RHandleUser=userID, SectionUser=userIDother)
 
 
 ######
@@ -49,7 +50,13 @@ ext <- SpatialPolygons(list(ext))
 # Build into internal polygon
 myamph <- trTr[trTr$user_id == as.character(userdf$InternalUser),, drop=FALSE]
 int <- myamph$info$internal[[1]]
-int <- as.data.frame(apply(int, 4, rbind))
+if (length(int) < 4){
+    myi <- which.max(unlist(lapply(myamph$info$internal[[1]], function(x) length(x))))
+    int <- myamph$info$internal[[1]][[myi]]
+    int <- as.data.frame(cbind(int[,,1],int[,,2]))
+} else {
+    int <- as.data.frame(apply(int, 4, rbind))
+}
 names(int) <- c("X","Y")
 int <- Polygon(int)
 int <- Polygons(list(int), ID=2)
@@ -62,7 +69,11 @@ names(ml) <- c("X","Y")
 ml <- Polygon(ml)
 ml <- Polygons(list(ml), ID=3)
 ml <- SpatialPolygons(list(ml))
-# Build neck-join polygon
+## # Switch to a bbox polygon if necessary
+## box <- Polygon(cbind(c(bbox(ml)[1,1], bbox(ml)[1,1], bbox(ml)[1,2], bbox(ml)[1,2], bbox(ml)[1,1]), c(bbox(ml)[2,1], bbox(ml)[2,2], bbox(ml)[2,2], bbox(ml)[2,1], bbox(ml)[2,1])))
+## box <- Polygons(list(box), "1")
+## ml <- SpatialPolygons(list(box))
+#Build neck-join polygon
 myamph <- trTr[trTr$user_id == as.character(userdf$NeckJoinUser),, drop=FALSE]
 nj <- myamph$info$neckjoin[[1]]
 nj <- as.data.frame(apply(nj, 4, rbind))
@@ -73,7 +84,13 @@ nj <- SpatialPolygons(list(nj))
 # Build left-handle polygon
 myamph <- trTr[trTr$user_id == as.character(userdf$LHandleUser),, drop=FALSE]
 lh <- myamph$info$lhandle[[1]]
-lh <- as.data.frame(apply(lh, 4, rbind))
+if (length(lh) < 4){
+    myi <- which.max(unlist(lapply(myamph$info$lhandle[[1]], function(x) length(x))))
+    lh <- myamph$info$lhandle[[1]][[myi]]
+    lh <- as.data.frame(cbind(lh[,,1],lh[,,2]))
+} else {
+    lh <- as.data.frame(apply(lh, 4, rbind))
+}
 names(lh) <- c("X","Y")
 lh <- Polygon(lh)
 lh <- Polygons(list(lh), ID=3)
@@ -172,9 +189,11 @@ amphB <- elide(amphB, rotate=prefrot, center=apply(bbox(allext), 1, mean))
 
 # Re-scale
 # Use the scalebar, scalebar measurement and height of unscaled allext to work out a target height for the amphora and scale to this. Extract the scalebar and dimension and use these plus the height of the amphora outline to establish the amphora's target height.
+myamph <- trTr[trTr$user_id == as.character(userdf$ScaleBarUser),, drop=FALSE]
 sb <- myamph$info$scalebar[[1]]
 sb <- data.frame(X=sb[,,1],Y=sb[,,2])
 sblength <- as.numeric(dist(sb))
+myamph <- trTr[trTr$user_id == as.character(userdf$DimensionUser),, drop=FALSE]
 dimension <- myamph$info$dimension
 # Create target height and re-scale
 conv <- dimension / sblength
