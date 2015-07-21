@@ -1,15 +1,18 @@
 # This builds on Andy Bevan's previous script for the BAI
 
 # Set working directory (for example as below)
-setwd("~/Documents/research/micropasts/analysis/eesAmarna/") #MacOSX
-#setwd("C:\\micropasts\\analysis\\eesAmarna") #Windows
-#setwd("micropasts/analysis/eesAmarna") #Linux
-
-app <- "eesAmarna"
+setwd("~/Documents/research/micropasts/analysis/eesArmana/") #MacOSX
+#setwd("C:\\micropasts\\analysis") #Windows
+#setwd("micropasts/analysis") #Linux
 
 # Create CSV directory if does not exist
 if (!file.exists('csv')){
   dir.create('csv')
+}
+
+# Create archives directory if does not exist
+if (!file.exists('archives')){
+  dir.create('archives')
 }
 
 # Create JSON folder 
@@ -27,15 +30,27 @@ library(jsonlite)
 users <- read.csv('csv/all_users.csv', header=TRUE)
 users <- users[,c("id","fullname","name")]
 
+# Set the project name
+project <- 'eesAmarna35'
+# Set the base url of the application
+baseUrl <- 'http://crowdsourced.micropasts.org/project/'
+# Set the task runs api path
+tasks <- '/tasks/export?type=task&format=json'
+# Form the export url
+url <- paste(baseUrl,project, tasks, sep='')
+print(url)
+archives <- paste('archives/',project,'Tasks.zip', sep='')
+print(archives)
 # Import tasks from json, this method has changed due to coding changes by SciFabric to their code
-download.file(paste("http://crowdsourced.micropasts.org/app/",app,"/tasks/export?type=task&format=json",sep=""),paste("json/",app,"Tasks.zip",sep=""))
-unzip(paste("json/",app,"Tasks.zip",sep=""), exdir="json")
-file.remove(paste("json/",app,"Tasks.zip",sep=""))
-task <- paste("json/",app,"_task.json",sep="")
+download.file(url,archives)
+unzip(archives)
+taskPath <- paste('json/', project, '.json', sep='')
+rename <- paste(project, '_task.json', sep='')
+file.rename(rename, taskPath)
 
 # Read json files
-which(lapply(readLines(task), function(x) tryCatch({jsonlite::fromJSON(x); 1}, error=function(e) 0)) == 0)
-trT <- fromJSON(paste(readLines(task), collapse=""))
+which(lapply(readLines(taskPath), function(x) tryCatch({jsonlite::fromJSON(x); 1}, error=function(e) 0)) == 0)
+trT <- fromJSON(paste(readLines(taskPath), collapse=""))
 trT <- cbind(trT$id,trT$info)
 trTfull <- trT
 
@@ -44,10 +59,16 @@ trT <- trT[,c(1,4,6)]
 names(trT) <- c("taskID","imageURL", "imageTitle")
 
 # Import task runs from json
-download.file(paste("http://crowdsourced.micropasts.org/app/",app,"/tasks/export?type=task_run&format=json",sep=""),paste("json/",app,"TaskRuns.zip",sep=""))
-unzip(paste("json/",app,"TaskRuns.zip",sep=""), exdir="json")
-file.remove(paste("json/",app,"TaskRuns.zip",sep=""))
-taskruns <- paste("json/",app,"_task_run.json",sep="")
+taskruns <- '/tasks/export?type=task_run&format=json'
+urlRuns <- paste(baseUrl,project, taskruns, sep='')
+print(urlRuns)
+archiveRuns <-paste('archives/', project, 'TasksRun.zip', sep='')
+download.file(urlRuns,archiveRuns)
+unzip(archiveRuns)
+taskruns <- paste('json/', project, '_task_run.json', sep='')
+renameRuns <-paste(project, '_task_run.json', sep='')   
+
+file.rename(renameRuns, taskruns)
 which(lapply(readLines(taskruns), function(x) tryCatch({jsonlite::fromJSON(x); 1}, error=function(e) 0)) == 0)
 trTr <- fromJSON(paste(readLines(taskruns), collapse=""))
 
@@ -93,4 +114,5 @@ preforder <- c("taskID","userID","provenance", "title", "imageTitle", "objectNum
 trTr2 <- trTr2[ ,preforder]
 
 # Export as csv file
-write.csv(trTr2, file=paste("csv/",app,".csv",sep=""),row.names=FALSE, na="")
+csvname <- paste('csv/', project, '.csv', sep='')
+write.csv(trTr2, file=csvname, row.names=FALSE, na="")
