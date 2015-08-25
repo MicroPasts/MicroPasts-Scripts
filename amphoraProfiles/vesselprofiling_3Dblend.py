@@ -248,10 +248,10 @@ mod = body.modifiers.new('Subdivision Surface', 'SUBSURF')
 # Extract the handle section, or if its not avaliable create a circle; in both cases adjust the coordinates so that in the x axis they go from 0 to 1 and the y axis is zero mean...
 cross_section = [field['polygons'][0] for field in fields.values() if field['Type']=='Handle section']
 
-if len(cross_section)==0:
+if len(cross_section)==0 or cross_section[0].shape[0]<3:
   # Just create a circle...
   ang = numpy.linspace(0.0, 2.0*numpy.pi, 33)
-  cross_section = numpy.concatenate((numpy.sin(ang)[:,numpy.newxis], numpy.cos(ang)[:,numpy.newxis]), axis=1)
+  cross_section = numpy.concatenate((numpy.sin(ang)[:,numpy.newaxis], numpy.cos(ang)[:,numpy.newaxis]), axis=1)
 
 else:
   # Take first one as no clue what to do otherwise...
