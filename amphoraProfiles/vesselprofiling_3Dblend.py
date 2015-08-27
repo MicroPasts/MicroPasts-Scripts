@@ -318,6 +318,7 @@ for field in fields.values():
 
     if (length[0]+length[2]) > (length[1]+length[3]):
       # Length 0 and length 2 are the curves to use - longest gets to be outer, shortest inner...
+      caps = curve[1], curve[3]
       if length[0] > length[2]:
         outer = curve[0]
         inner = curve[2]
@@ -327,12 +328,57 @@ for field in fields.values():
     
     else:
       # Length 1 and length 3 are the curves to use - longest gets to be outer, shortest inner...
+      caps = curve[0], curve[2]
       if length[1] > length[3]:
         outer = curve[1]
         inner = curve[3]
       else:
         outer = curve[3]
         inner = curve[1]
+    
+    
+    # Create inner and outer curves as no-face meshes, on layer 3, for diagnostic purposes...
+    inner_vert = numpy.concatenate((inner[:,0,numpy.newaxis], numpy.zeros((inner.shape[0],1), dtype=numpy.float32), inner[:,1,numpy.newaxis]), axis=1)
+    inner_edge = numpy.concatenate((numpy.arange(0,inner.shape[0]-1)[:,numpy.newaxis], numpy.arange(1,inner.shape[0])[:,numpy.newaxis]), axis=1)
+    
+    inner_mesh = bpy.data.meshes.new('Inner')
+    inner_mesh.from_pydata(inner_vert, inner_edge, [])
+    inner_mesh.update()
+    inner_mesh.validate()
+    
+    inner_object = bpy.data.objects.new('Inner', inner_mesh)
+    bpy.context.scene.objects.link(inner_object)
+    
+    inner_object.layers[2] = True
+    inner_object.layers[0] = False
+    
+    outer_vert = numpy.concatenate((outer[:,0,numpy.newaxis], numpy.zeros((outer.shape[0],1), dtype=numpy.float32), outer[:,1,numpy.newaxis]), axis=1)
+    outer_edge = numpy.concatenate((numpy.arange(0,outer.shape[0]-1)[:,numpy.newaxis], numpy.arange(1,outer.shape[0])[:,numpy.newaxis]), axis=1)
+    
+    outer_mesh = bpy.data.meshes.new('Outer')
+    outer_mesh.from_pydata(outer_vert, outer_edge, [])
+    outer_mesh.update()
+    outer_mesh.validate()
+    
+    outer_object = bpy.data.objects.new('Outer', outer_mesh)
+    bpy.context.scene.objects.link(outer_object)
+    
+    outer_object.layers[2] = True
+    outer_object.layers[0] = False
+    
+    for c, cap in enumerate(caps):
+      cap_vert = numpy.concatenate((cap[:,0,numpy.newaxis], numpy.zeros((cap.shape[0],1), dtype=numpy.float32), cap[:,1,numpy.newaxis]), axis=1)
+    
+      cap_mesh = bpy.data.meshes.new('Cap')
+      cap_mesh.from_pydata(cap_vert, [], [])
+      cap_mesh.update()
+      cap_mesh.validate()
+    
+      cap_object = bpy.data.objects.new('Cap', cap_mesh)
+      bpy.context.scene.objects.link(cap_object)
+    
+      cap_object.layers[2] = True
+      cap_object.layers[0] = False
     
     
     # Define functions to get the locations on the two curves, based on length alone, so t goes from 0 to 1 - have not made any effort to be efficient about this, as not enough data to worry...
