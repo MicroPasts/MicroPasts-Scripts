@@ -31,6 +31,11 @@ try:
 except ValueError:
   render = False
 
+try:
+  use_left = sys.argv.index('left') > sys.argv.index('--')
+except ValueError:
+  use_left = False
+
 radial_ends = 0.2
 
 
@@ -270,194 +275,202 @@ cross_section[:,1] = (cross_section[:,1] - mean) / (high - low)
 
 
 # Process each handle curve in turn...
-for field in fields.values():
-  if field['Type'] in ['Handle', 'Left Handle', 'Right Handle']:
-    # Get the polygon...
-    outline = field['polygons'][0]
-    
-    # The handle is one continuous curve - need to break it into 4 parts - outer, inner and the two that are touching the external surface - discover these breaks as the 4 largest changes in direction of the curve...
-    change = numpy.empty(outline.shape[0]-1) # -1 because of duplicated point at end.
-    for i in range(change.shape[0]):
-      before = (i + change.shape[0] - 1) % change.shape[0]
-      after = (i + 1) % change.shape[0]
-      
-      v1x = outline[before,0] - outline[i,0]
-      v1y = outline[before,1] - outline[i,1]
-      v2x = outline[after,0] - outline[i,0]
-      v2y = outline[after,1] - outline[i,1]
-      
-      v1l = numpy.sqrt(v1x**2 + v1y**2)
-      v2l = numpy.sqrt(v2x**2 + v2y**2)
-      
-      change[i] = (v1x*v2x + v1y*v2y) / (v1l * v2l)
-    
-    breaks = []
-    for _ in range(4):
-      v = numpy.argmax(change)
-      change[v] = -1.0
-      breaks.append(v)
-    
-    
-    # Order the break indices, extract the segments...
-    breaks.sort()
-    
-    curve = []
-    curve.append(outline[breaks[0]:breaks[1]+1,:])
-    curve.append(outline[breaks[1]:breaks[2]+1,:])
-    curve.append(outline[breaks[2]:breaks[3]+1,:])
-    curve.append(numpy.concatenate((outline[breaks[3]:change.shape[0],:], outline[0:breaks[0]+1,:]), axis=0))
-    
-    
-    # There are two combinations - select the one that results in the longest overall length...
-    length = numpy.zeros(4)
-    for i in range(4):
-      for j in range(curve[i].shape[0]-1):
-        dx = curve[i][j+1,0] - curve[i][j,0]
-        dy = curve[i][j+1,1] - curve[i][j,1]
-        length[i] += numpy.sqrt(dx**2 + dy**2)
+handle_fields = [field for field in fields.values() if field['Type'] in ['Handle', 'Left Handle', 'Right Handle']]
 
-    if (length[0]+length[2]) > (length[1]+length[3]):
-      # Length 0 and length 2 are the curves to use - longest gets to be outer, shortest inner...
-      caps = curve[1], curve[3]
-      if length[0] > length[2]:
-        outer = curve[0]
-        inner = curve[2]
-      else:
-        outer = curve[2]
-        inner = curve[0]
+for field in handle_fields:
+  # Get the polygon...
+  outline = field['polygons'][0]
     
+  # If its the right handle and we are meant to be using the left make the swap...
+  if use_left and (outline[:,0] > 0.0).all():
+    other = [f for f in handle_fields if id(f)!=id(field)][0]
+    outline = other['polygons'][0].copy()
+    outline[:,0] *= -1.0
+    outline = outline[::-1,:]
+    
+  # The handle is one continuous curve - need to break it into 4 parts - outer, inner and the two that are touching the external surface - discover these breaks as the 4 largest changes in direction of the curve...
+  change = numpy.empty(outline.shape[0]-1) # -1 because of duplicated point at end.
+  for i in range(change.shape[0]):
+    before = (i + change.shape[0] - 1) % change.shape[0]
+    after = (i + 1) % change.shape[0]
+      
+    v1x = outline[before,0] - outline[i,0]
+    v1y = outline[before,1] - outline[i,1]
+    v2x = outline[after,0] - outline[i,0]
+    v2y = outline[after,1] - outline[i,1]
+      
+    v1l = numpy.sqrt(v1x**2 + v1y**2)
+    v2l = numpy.sqrt(v2x**2 + v2y**2)
+      
+    change[i] = (v1x*v2x + v1y*v2y) / (v1l * v2l)
+    
+  breaks = []
+  for _ in range(4):
+    v = numpy.argmax(change)
+    change[v] = -1.0
+    breaks.append(v)
+    
+    
+  # Order the break indices, extract the segments...
+  breaks.sort()
+    
+  curve = []
+  curve.append(outline[breaks[0]:breaks[1]+1,:])
+  curve.append(outline[breaks[1]:breaks[2]+1,:])
+  curve.append(outline[breaks[2]:breaks[3]+1,:])
+  curve.append(numpy.concatenate((outline[breaks[3]:change.shape[0],:], outline[0:breaks[0]+1,:]), axis=0))
+    
+    
+  # There are two combinations - select the one that results in the longest overall length...
+  length = numpy.zeros(4)
+  for i in range(4):
+    for j in range(curve[i].shape[0]-1):
+      dx = curve[i][j+1,0] - curve[i][j,0]
+      dy = curve[i][j+1,1] - curve[i][j,1]
+      length[i] += numpy.sqrt(dx**2 + dy**2)
+
+  if (length[0]+length[2]) > (length[1]+length[3]):
+    # Length 0 and length 2 are the curves to use - longest gets to be outer, shortest inner...
+    caps = curve[1], curve[3]
+    if length[0] > length[2]:
+      outer = curve[0]
+      inner = curve[2]
     else:
-      # Length 1 and length 3 are the curves to use - longest gets to be outer, shortest inner...
-      caps = curve[0], curve[2]
-      if length[1] > length[3]:
-        outer = curve[1]
-        inner = curve[3]
-      else:
-        outer = curve[3]
-        inner = curve[1]
+      outer = curve[2]
+      inner = curve[0]
+    
+  else:
+    # Length 1 and length 3 are the curves to use - longest gets to be outer, shortest inner...
+    caps = curve[0], curve[2]
+    if length[1] > length[3]:
+      outer = curve[1]
+      inner = curve[3]
+    else:
+      outer = curve[3]
+      inner = curve[1]
     
     
-    # Create inner and outer curves as no-face meshes, on layer 3, for diagnostic purposes...
-    inner_vert = numpy.concatenate((inner[:,0,numpy.newaxis], numpy.zeros((inner.shape[0],1), dtype=numpy.float32), inner[:,1,numpy.newaxis]), axis=1)
-    inner_edge = numpy.concatenate((numpy.arange(0,inner.shape[0]-1)[:,numpy.newaxis], numpy.arange(1,inner.shape[0])[:,numpy.newaxis]), axis=1)
+  # Create inner and outer curves as no-face meshes, on layer 3, for diagnostic purposes...
+  inner_vert = numpy.concatenate((inner[:,0,numpy.newaxis], numpy.zeros((inner.shape[0],1), dtype=numpy.float32), inner[:,1,numpy.newaxis]), axis=1)
+  inner_edge = numpy.concatenate((numpy.arange(0,inner.shape[0]-1)[:,numpy.newaxis], numpy.arange(1,inner.shape[0])[:,numpy.newaxis]), axis=1)
     
-    inner_mesh = bpy.data.meshes.new('Inner')
-    inner_mesh.from_pydata(inner_vert, inner_edge, [])
-    inner_mesh.update()
-    inner_mesh.validate()
+  inner_mesh = bpy.data.meshes.new('Inner')
+  inner_mesh.from_pydata(inner_vert, inner_edge, [])
+  inner_mesh.update()
+  inner_mesh.validate()
     
-    inner_object = bpy.data.objects.new('Inner', inner_mesh)
-    bpy.context.scene.objects.link(inner_object)
+  inner_object = bpy.data.objects.new('Inner', inner_mesh)
+  bpy.context.scene.objects.link(inner_object)
     
-    inner_object.layers[2] = True
-    inner_object.layers[0] = False
+  inner_object.layers[2] = True
+  inner_object.layers[0] = False
     
-    outer_vert = numpy.concatenate((outer[:,0,numpy.newaxis], numpy.zeros((outer.shape[0],1), dtype=numpy.float32), outer[:,1,numpy.newaxis]), axis=1)
-    outer_edge = numpy.concatenate((numpy.arange(0,outer.shape[0]-1)[:,numpy.newaxis], numpy.arange(1,outer.shape[0])[:,numpy.newaxis]), axis=1)
+  outer_vert = numpy.concatenate((outer[:,0,numpy.newaxis], numpy.zeros((outer.shape[0],1), dtype=numpy.float32), outer[:,1,numpy.newaxis]), axis=1)
+  outer_edge = numpy.concatenate((numpy.arange(0,outer.shape[0]-1)[:,numpy.newaxis], numpy.arange(1,outer.shape[0])[:,numpy.newaxis]), axis=1)
     
-    outer_mesh = bpy.data.meshes.new('Outer')
-    outer_mesh.from_pydata(outer_vert, outer_edge, [])
-    outer_mesh.update()
-    outer_mesh.validate()
+  outer_mesh = bpy.data.meshes.new('Outer')
+  outer_mesh.from_pydata(outer_vert, outer_edge, [])
+  outer_mesh.update()
+  outer_mesh.validate()
     
-    outer_object = bpy.data.objects.new('Outer', outer_mesh)
-    bpy.context.scene.objects.link(outer_object)
+  outer_object = bpy.data.objects.new('Outer', outer_mesh)
+  bpy.context.scene.objects.link(outer_object)
     
-    outer_object.layers[2] = True
-    outer_object.layers[0] = False
+  outer_object.layers[2] = True
+  outer_object.layers[0] = False
     
-    for c, cap in enumerate(caps):
-      cap_vert = numpy.concatenate((cap[:,0,numpy.newaxis], numpy.zeros((cap.shape[0],1), dtype=numpy.float32), cap[:,1,numpy.newaxis]), axis=1)
+  for c, cap in enumerate(caps):
+    cap_vert = numpy.concatenate((cap[:,0,numpy.newaxis], numpy.zeros((cap.shape[0],1), dtype=numpy.float32), cap[:,1,numpy.newaxis]), axis=1)
     
-      cap_mesh = bpy.data.meshes.new('Cap')
-      cap_mesh.from_pydata(cap_vert, [], [])
-      cap_mesh.update()
-      cap_mesh.validate()
+    cap_mesh = bpy.data.meshes.new('Cap')
+    cap_mesh.from_pydata(cap_vert, [], [])
+    cap_mesh.update()
+    cap_mesh.validate()
     
-      cap_object = bpy.data.objects.new('Cap', cap_mesh)
-      bpy.context.scene.objects.link(cap_object)
+    cap_object = bpy.data.objects.new('Cap', cap_mesh)
+    bpy.context.scene.objects.link(cap_object)
     
-      cap_object.layers[2] = True
-      cap_object.layers[0] = False
+    cap_object.layers[2] = True
+    cap_object.layers[0] = False
     
     
-    # Define functions to get the locations on the two curves, based on length alone, so t goes from 0 to 1 - have not made any effort to be efficient about this, as not enough data to worry...
-    def curve_pos(curve, t):
-      lengths = numpy.sqrt(numpy.square(curve[1:,:] - curve[:-1,:]).sum(axis=1))
+  # Define functions to get the locations on the two curves, based on length alone, so t goes from 0 to 1 - have not made any effort to be efficient about this, as not enough data to worry...
+  def curve_pos(curve, t):
+    lengths = numpy.sqrt(numpy.square(curve[1:,:] - curve[:-1,:]).sum(axis=1))
       
-      total = numpy.cumsum(lengths)
-      t *= total[-1]
+    total = numpy.cumsum(lengths)
+    t *= total[-1]
       
-      base = numpy.searchsorted(total, t)
-      if (base+1)==total.shape[0]:
-        base -= 1
+    base = numpy.searchsorted(total, t)
+    if (base+1)==total.shape[0]:
+      base -= 1
       
-      seg_t = (t - (total[base] - lengths[base])) / lengths[base]
-      return (1.0-seg_t) * curve[base,:] + seg_t * curve[base+1,:]
+    seg_t = (t - (total[base] - lengths[base])) / lengths[base]
+    return (1.0-seg_t) * curve[base,:] + seg_t * curve[base+1,:]
     
     
-    # Iterate and stitch together a sequence of curves - let Blender fix the edges so only do vertices and faces...
-    verts = []
-    faces = []
+  # Iterate and stitch together a sequence of curves - let Blender fix the edges so only do vertices and faces...
+  verts = []
+  faces = []
     
-    for t in numpy.linspace(0.0, 1.0, 96):
-      # Get the inner and outer position between which we will interpolate the 
-      start = curve_pos(outer, t)
-      end = curve_pos(inner, 1.0-t)
-      dist = numpy.sqrt(numpy.square(end - start).sum())
+  for t in numpy.linspace(0.0, 1.0, 96):
+    # Get the inner and outer position between which we will interpolate the 
+    start = curve_pos(outer, t)
+    end = curve_pos(inner, 1.0-t)
+    dist = numpy.sqrt(numpy.square(end - start).sum())
       
-      # Copy the cross section, with an additional third dimension...
-      cs = numpy.concatenate((cross_section[:,:], numpy.zeros((cross_section.shape[0],1))), axis=1)
+    # Copy the cross section, with an additional third dimension...
+    cs = numpy.concatenate((cross_section[:,:], numpy.zeros((cross_section.shape[0],1))), axis=1)
       
-      # Calculate the coordinates of the vertices from positioning the cross scetion between the inner and outer curve at the current position...
-      xt = cs[:,0].copy()
-      cs[:,0] = (1.0 - xt) * start[numpy.newaxis,0] + xt * end[numpy.newaxis,0]
-      cs[:,1] *= dist
-      cs[:,2] = (1.0 - xt) * start[numpy.newaxis,1] + xt * end[numpy.newaxis,1]
+    # Calculate the coordinates of the vertices from positioning the cross scetion between the inner and outer curve at the current position...
+    xt = cs[:,0].copy()
+    cs[:,0] = (1.0 - xt) * start[numpy.newaxis,0] + xt * end[numpy.newaxis,0]
+    cs[:,1] *= dist
+    cs[:,2] = (1.0 - xt) * start[numpy.newaxis,1] + xt * end[numpy.newaxis,1]
       
-      # If close to the end of the handle interpolate towards radial coordinates, to make sure we get a clean join...
-      if (t<radial_ends) or ((1.0-t)<radial_ends):
-        amount = (t / radial_ends) if t<radial_ends else ((1.0-t) / radial_ends)
+    # If close to the end of the handle interpolate towards radial coordinates, to make sure we get a clean join...
+    if (t<radial_ends) or ((1.0-t)<radial_ends):
+      amount = (t / radial_ends) if t<radial_ends else ((1.0-t) / radial_ends)
         
-        ratio = numpy.fabs(cs[:,0]) / numpy.sqrt(numpy.square(cs[:,:2]).sum(axis=1))
+      ratio = numpy.fabs(cs[:,0]) / numpy.sqrt(numpy.square(cs[:,:2]).sum(axis=1))
         
-        ratio = numpy.exp(numpy.log(ratio) * (1.0-amount)) # Interpolation bit - looks weird but makes sense if you think amount it!
+      ratio = numpy.exp(numpy.log(ratio) * (1.0-amount)) # Interpolation bit - looks weird but makes sense if you think amount it!
         
-        cs[:,:2] *= ratio[:,numpy.newaxis]
+      cs[:,:2] *= ratio[:,numpy.newaxis]
       
-      # Add the vertices to the mesh...
-      base = len(verts)
+    # Add the vertices to the mesh...
+    base = len(verts)
+    for i in range(cs.shape[0]-1):
+      verts.append((cs[i,0], cs[i,1], cs[i,2]))
+      
+    # If there are previous rings of vertices add in the faces needed to stitch this ring to the previous...
+    if t!=0.0:
       for i in range(cs.shape[0]-1):
-        verts.append((cs[i,0], cs[i,1], cs[i,2]))
-      
-      # If there are previous rings of vertices add in the faces needed to stitch this ring to the previous...
-      if t!=0.0:
-        for i in range(cs.shape[0]-1):
-          v1 = base+i
-          v2 = base+(i+1)%(cs.shape[0]-1)
-          v3 = v2 - (cs.shape[0]-1)
-          v4 = v1 - (cs.shape[0]-1)
-          faces.append((v1, v2, v3, v4))
+        v1 = base+i
+        v2 = base+(i+1)%(cs.shape[0]-1)
+        v3 = v2 - (cs.shape[0]-1)
+        v4 = v1 - (cs.shape[0]-1)
+        faces.append((v1, v2, v3, v4))
     
     
-    # Add end caps so its a sealed mesh...
-    #faces.append(tuple(range(cross_section.shape[0]-1)))
-    #faces.append(tuple(range(len(verts)-cross_section.shape[0]+1, len(verts))))
+  # Add end caps so its a sealed mesh...
+  #faces.append(tuple(range(cross_section.shape[0]-1)))
+  #faces.append(tuple(range(len(verts)-cross_section.shape[0]+1, len(verts))))
     
    
-    # Make a mesh from the vertex and face cloud just created...
-    mesh = bpy.data.meshes.new('Handle')
-    mesh.from_pydata(verts, [], faces)
-    mesh.update()
-    mesh.validate()
+  # Make a mesh from the vertex and face cloud just created...
+  mesh = bpy.data.meshes.new('Handle')
+  mesh.from_pydata(verts, [], faces)
+  mesh.update()
+  mesh.validate()
     
-    mesh.polygons.foreach_set('use_smooth', [True] * len(faces))
+  mesh.polygons.foreach_set('use_smooth', [True] * len(faces))
       
 
-    # Create an object for it...
-    object = bpy.data.objects.new('Handle',  mesh)
-    bpy.context.scene.objects.link(object)
-    parts.append(object)
+  # Create an object for it...
+  object = bpy.data.objects.new('Handle',  mesh)
+  bpy.context.scene.objects.link(object)
+  parts.append(object)
 
 
 

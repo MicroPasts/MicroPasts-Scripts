@@ -23,6 +23,9 @@ parser = argparse.ArgumentParser(description='Parses an entire directory of amph
 parser.add_argument('-f', '--force', help='Forces it to process all files, even if they have already been processed. Should only be necesary when making modifications to the scripts.',  default=False, action='store_true')
 parser.add_argument('-r', '--render', help='Makes it render an image with each file - this can take a while!',  default=False, action='store_true')
 
+parser.add_argument('-l', '--left', help='Makes it use the left handle only, mirroring it to get the right handle. helps for some dodgy users.',  default=False, action='store_true')
+
+
 parser.add_argument('-t', '--tail', help="Will only process shapefiles if they end with the provided string, before the file extension. It defaults to 'forBlender'.", type=str, default='forBlender')
 parser.add_argument('-b', '--blender', help="Where to find Blender on the operating system; default to '~blender/blender', the assumption on Mac/Linux that it is in the folder 'blender' under your home directory.", type=str, default='~/blender/blender')
 
@@ -92,6 +95,8 @@ for i, job in enumerate(jobs):
   cmd = [args.blender, '-b', '--python', args.script, '--', job]
   if args.render:
     cmd.append('render')
+  if args.left:
+    cmd.append('left')
   
   print cmd
   subprocess.call(cmd)
