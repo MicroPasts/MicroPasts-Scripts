@@ -8,6 +8,7 @@
 
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
+import sys
 import os.path
 import argparse
 import subprocess
@@ -27,8 +28,12 @@ parser.add_argument('-l', '--left', help='Makes it use the left handle only, mir
 
 
 parser.add_argument('-t', '--tail', help="Will only process shapefiles if they end with the provided string, before the file extension. It defaults to 'forBlender'.", type=str, default='forBlender')
-parser.add_argument('-b', '--blender', help="Where to find Blender on the operating system; default to '~blender/blender', the assumption on Mac/Linux that it is in the folder 'blender' under your home directory.", type=str, default='~/blender/blender')
 
+default_blender = '~/blender/blender'
+if sys.platform.startswith('darwin'):
+  default_blender = '~/blender/blender.app/Contents/MacOS/blender'
+
+parser.add_argument('-b', '--blender', help="Where to find Blender on the operating system; default to '~blender/blender' on Linux, '~/blender/blender.app/Contents/MacOS/blender' on Mac, the assumption on that it is in the folder 'blender' under your home directory.", type=str, default=default_blender)
 parser.add_argument('dir', help='Directory it searches for shape files.')
 
 
