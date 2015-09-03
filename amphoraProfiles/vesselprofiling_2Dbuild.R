@@ -6,12 +6,12 @@
 
 # The script is meant to be run after having run a set of user checks with vesselprofiling_userchecks.R. It is also meant as a pre-cursor to the vesselprofiling_3Dblend.py Blender script. These three scripts together constitute a complete workflow.
 
-# Andy Bevan 03-March-2015
+# Andy Bevan
 
 ######
 
 # Set-up (things you can change)
-setwd("~/Documents/research/micropasts/analysis/amphs/examples") #MacOSX
+setwd("~/Desktop") #MacOSX
 appname <- "amphs1" #the app from which you wish to extract an outline.
 taskID <- 31382 #which task you want to model.
 userID <- 989 #to specify a particular contributor.
@@ -219,12 +219,13 @@ dr <- strsplit(drurl,"/")[[1]]
 dr <- dr[length(dr)]
 dr <- strsplit(dr,"[.]")[[1]][1]
 
-# Assuming the drawing directory already exists, create a sub-directory in it:
-dir.create(paste(dr,"/build2D",sep=""))
+# Check if the drawing directory already exists, otherwise create a sub-directory in it. Same for the necessary sub-directory.
+if (!dir.exists(dr)){ dir.create(dr) }
+if (!dir.exists(paste(dr,"/build2D",sep=""))){ dir.create(paste(dr,"/build2D",sep="")) }
 
 # Export as shapefile
-writeOGR(amph, dsn=paste(dr,"/build2D/",dr,"_2Dpoly", sep=""), layer="DR356_2Dpoly", driver="ESRI Shapefile", overwrite_layer=TRUE)
-writeOGR(amphB, dsn=paste(dr,"/build2D/",dr,"_forBlender", sep=""), layer="DR356_forBlender", driver="ESRI Shapefile", overwrite_layer=TRUE)
+writeOGR(amph, dsn=paste(dr,"/build2D/",dr,"_2Dpoly", sep=""), layer=paste(dr,"_2Dpoly", sep=""), driver="ESRI Shapefile", overwrite_layer=TRUE)
+writeOGR(amphB, dsn=paste(dr,"/build2D/",dr,"_forBlender", sep=""), layer=paste(dr,"_2Dpoly", sep=""), driver="ESRI Shapefile", overwrite_layer=TRUE)
 
 # Save a pdf summary
 dev.new(device=pdf, height=6, width=4)
