@@ -223,9 +223,11 @@ dr <- strsplit(dr,"[.]")[[1]][1]
 if (!dir.exists(dr)){ dir.create(dr) }
 if (!dir.exists(paste(dr,"/build2D",sep=""))){ dir.create(paste(dr,"/build2D",sep="")) }
 
-# Export as shapefile
-writeOGR(amph, dsn=paste(dr,"/build2D/",dr,"_2Dpoly", sep=""), layer=paste(dr,"_2Dpoly", sep=""), driver="ESRI Shapefile", overwrite_layer=TRUE)
-writeOGR(amphB, dsn=paste(dr,"/build2D/",dr,"_forBlender", sep=""), layer=paste(dr,"_2Dpoly", sep=""), driver="ESRI Shapefile", overwrite_layer=TRUE)
+## # Export as shapefile
+## writeOGR(amph, dsn=paste(dr,"/build2D/",dr,"_2Dpoly", sep=""), layer=paste(dr,"_2Dpoly", sep=""), driver="ESRI Shapefile", overwrite_layer=TRUE)
+## writeOGR(amphB, dsn=paste(dr,"/build2D/",dr,"_forBlender", sep=""), layer=paste(dr,"_2Dpoly", sep=""), driver="ESRI Shapefile", overwrite_layer=TRUE)
+
+
 
 # Save a pdf summary
 dev.new(device=pdf, height=6, width=4)
@@ -236,6 +238,6 @@ plot(amph[amph$Type=="Handle section",], col="black", add=TRUE)
 plot(amph[amph$Type=="Internal",], col="darkred", add=TRUE)
 plot(amph[amph$Type=="Neck join",], col="grey75", add=TRUE)
 plot(amph[amph$Type=="External",], col="black", add=TRUE)
-dev.print(device=pdf, paste(dr,"/build2D/",dr,".pdf", sep=""))
+dev.print(device=pdf, paste(fns,".pdf", sep=""))
 dev.off()
 
