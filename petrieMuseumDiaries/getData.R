@@ -36,7 +36,7 @@ users <- read.csv('../users/all_users.csv', header=TRUE)
 users <- users[,c("id","fullname","name")]
 
 # Set the project name
-project <- 'Petrie1884'
+project <- 'PetrieDiaries1884'
 # Set the base url of the application
 baseUrl <- 'http://crowdsourced.micropasts.org/project/'
 # Set the task runs api path
@@ -94,7 +94,11 @@ for (a in 1:length(tsks)){
   contribs <- sort(unique(as.numeric(as.character(atask$userID))))
   contribsNm <- users[users$id %in% contribs,]
   credits$taskID[a] <- tsks[a]
-  credits$inputBy[a] <- paste(as.character(contribsNm$fullname), collapse="; ")
+  if(is.null(contribsNm$fullname)) {
+    credits$inputBy[a] <- "Anonymous user"
+      } else {
+    credits$inputBy[a] <- paste(as.character(contribsNm$fullname), collapse="; ")
+  }
 }
 
 # Merge task summaries with image URL and user credit data.
@@ -110,13 +114,9 @@ for (a in 1:length(tsks)){
   trTr1 <- rbind(trTr1,atask,newrow,newrow)
 }
 
-# Annotations column not really needed, so dropped
-#keeps <- c("taskID","userID","day1date", "day1Text", "imageTitle", "objectNumber", 'negativeNumber', 'distribution', 'otherNotes', 'inputBy', 'comments', 'imageURL')
-#trTr2 <- trTr1[,keeps,drop=FALSE]
-
 # Finally reorder the columns fo the data to something easier to refer to:
 preforder <- c("taskID","userID","day1date", "day1text", "day2date", "day2text", "day3date", "day3text", "day4date", "day4text", "comments", "imageURL", "inputBy")
-trTr2 <- trTr2[ ,preforder]
+trTr2 <- trTr1[ ,preforder]
 
 # Export as csv file
 csvname <- paste('csv/', project, '.csv', sep='')
