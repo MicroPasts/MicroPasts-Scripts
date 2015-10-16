@@ -94,12 +94,10 @@ for (a in 1:length(tsks)){
   contribs <- sort(unique(as.numeric(as.character(atask$userID))))
   contribsNm <- users[users$id %in% contribs,]
   credits$taskID[a] <- tsks[a]
-  if(is.null(contribsNm$fullname)) {
-    credits$inputBy[a] <- "Anonymous user"
-      } else {
-    credits$inputBy[a] <- paste(as.character(contribsNm$fullname), collapse="; ")
-  }
+  print(contribsNm)
+  credits$inputBy[a] <- paste(as.character(contribsNm$fullname), collapse="; ")
 }
+
 
 # Merge task summaries with image URL and user credit data.
 credurl <- merge(credits, trT, by="taskID")
