@@ -2,7 +2,7 @@
 #' title: " A script for manipulation of the PAS data for RIC identifiers"
 #' author: "Daniel Pett"
 #' date: "02/01/2016"
-#' output: csv_document | RDF
+#' output: csv_document
 #' ----
 #' 
 
@@ -65,8 +65,11 @@ trT <- cbind(trT$id,trT$info)
 objects <- as.data.frame(trT$object)
 names(objects) <- c('uri')
 obj <- cbind(read.table(text = names(objects)), objects)
+# Order columns
 trT <- trT[,order(names(trT))]
+# Rename columns
 names(trT) <- c('match1', 'match2', 'match3', 'match4', 'object', 'taskID')
+
 # Download PAS data using lapply
 get.data <- function(objects){
   uri <- paste(objects, '/format/json', sep = '')
@@ -108,13 +111,18 @@ names(meta)[length(names(meta))] <- "taskID"
 names(meta)[length(names(meta))-1] <- "userID"
 taskData <- merge( meta,trT, by="taskID")
 withCoinData <- merge(taskData, df, by="object")
+
 # Final data pumped out
 named <- merge(withCoinData, users, by="userID", all.x=TRUE)
 finalData <- named[order(named$taskID),]
 finalData$userID <- NULL
+
+# Replace boolean values 
 finalData$unattributable[finalData$unattributable =="0"] <- ""
 finalData$unattributable[finalData$unattributable =="1"] <- "No match can be made" 
 finalData$revisePas[finalData$revisePas =="0"] <- "" 
 finalData$revisePas[finalData$revisePas =="1"] <- "The PAS record needs revising" 
+
+# Write CSV file output
 csvname <- paste('csv/', project, '.csv', sep='')
 write.csv(finalData, file=csvname,row.names=FALSE, na="")
