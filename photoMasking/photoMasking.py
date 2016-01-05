@@ -1,6 +1,7 @@
 #!/usr/bin/python
 ## Download files from Amazon S3 (e.g. raw photos for 3D models)
 ## Andy Bevan 15-Jun-2014, updated 21-Nov-2014
+## Daniel Pett updated 05-Jan-2016
 __author__ = 'ahb108'
 ## Currently for Python 2.7.5 (tested on MacOSX 10.9.2) launched in a virtual environment:
 
