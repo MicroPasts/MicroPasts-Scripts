@@ -39,7 +39,7 @@ for q in range(0, len(files)):
     imnameonly = os.path.splitext(files[q])[0]
 
     # Get JSON data for tasks and find task ID for this file
-    downloadURL = str(pybinst) + '/app/' + str(app) + '/tasks/export?type=task&format=json'   
+    downloadURL = str(pybinst) + '/project/' + str(app) + '/tasks/export?type=task&format=json'   
     outputFilename = str(app) + '_task.json'
 
     # Download JSON file to working direcory
@@ -76,7 +76,7 @@ for q in range(0, len(files)):
     # Get JSON data for task runs (even if they are duplicated)
     jtaskruns = []
     for a in range(0, len(imtasks)):
-        downloadURL = str(pybinst) + '/app/' + str(app) + '/' + str(imtasks[a]) + '/results.json'     
+        downloadURL = str(pybinst) + '/project/' + str(app) + '/' + str(imtasks[a]) + '/results.json'     
         outputFilename = str(app) + str(imtasks[a]) + '_task_run.json'
 
         # Download JSON files to working direcory
